@@ -79,7 +79,6 @@ In your repository settings on GitHub:
         ├── site.js             # Global navigation & status bar behaviour
         ├── season.js           # Complete 1,180-line match & season engine
         ├── season-data.json    # Global metadata for all 22 leagues, clubs, and stadiums
-        ├── analytics.js        # Offline telemetry stub
         ├── fonts/              # WOFF2 retro bitmap fonts
         │   ├── ms_sans_serif.woff2
         │   ├── cm_sans_13.woff2

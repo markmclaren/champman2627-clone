@@ -29,13 +29,6 @@
     a.addEventListener('click', e => { e.preventDefault(); show(a.dataset.tip); });
   });
 
-  // Play links: count clicks (including blocked ones on phones), sent as a beacon so it survives leaving the page
-  if (body.dataset.page !== 'play') $$('a[href="play"], a[href="quick-season"]').forEach(a => a.addEventListener('click', () =>
-    window.cmTrack('play_clicked', { from: body.dataset.page, link: a.firstChild?.textContent?.trim().slice(0, 40), to: a.getAttribute('href'), game: a.getAttribute('href') === 'quick-season' ? 'mobile' : 'core', touch: window.cmTouchOnly }, { transport: 'sendBeacon' })));
-
-  // Home tiles: which ones people use (decides what earns a place there)
-  if (body.dataset.page === 'home') $$('.menu .tile').forEach(a => a.addEventListener('click', () =>
-    window.cmTrack('home_tile_clicked', { tile: a.firstChild?.textContent?.trim().slice(0, 40), to: a.getAttribute('href'), touch: window.cmTouchOnly }, { transport: 'sendBeacon' })));
 
   // Menu: mark the current page
   $$(`.minimenu [data-page="${body.dataset.page}"]`).forEach(a => a.classList.add('on'));
@@ -173,7 +166,6 @@
         if (!r.ok) throw new Error(j.error || `error ${r.status}`);
         $('#sentNo').textContent = j.number ? `#${j.number}` : '';
         form.hidden = true; $('#sent').hidden = false;
-        window.cmTrack('feedback_sent', { kind: kind(), from, images: shots.length });
       } catch (err) {
         $('#fbErr').textContent = `Couldn't send it (${err.message}). Please try again in a minute.`;
       } finally { btn.disabled = false; }

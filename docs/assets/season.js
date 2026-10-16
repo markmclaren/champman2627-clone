@@ -15,8 +15,7 @@ let opener = _____WB$wombat$assign$function_____("opener");
 // The match engine started from splurge69/football-manager (xG from the strength gap plus home
 // advantage, Poisson scorelines). Strength is Ability (shown as the rating, out of 200), adjusted for
 // position, side, fitness and form. Data from make_web.season_data: assets/season-data.json, then
-// assets/season/<league>.json. Analytics: this is the mobile game, so its events are mobile_* (and
-// analytics.js tags every event on this page game: 'mobile').
+// assets/season/<league>.json.
 {
   const root = document.getElementById('season');
   const v = new URL(document.currentScript.src).searchParams.get('v') || '';
@@ -444,7 +443,6 @@ let opener = _____WB$wombat$assign$function_____("opener");
       difficulty: sv.difficulty || 'normal', board: sv.board ?? 60, sacked: !!sv.sacked, htChanges: sv.htChanges || 0 });
     S.rng.set(sv.rng);
     S.undo = sv.undo ? { ...sv.undo, shirts: at(sv.undo.shirts) } : null; if (!S.undo) snapshot();
-    window.cmTrack('mobile_season_resumed', { league: S.league.code, club: S.club.n, matchday: S.md, started: !!S.started });
     S.sacked ? sackedScreen() : S.started && S.md === S.days.length ? final() : hubScreen('fwd');
   }
   // Sideways on a phone the game is covered by "Turn your phone upright" (site.css); a match waits until it's upright again.
@@ -486,8 +484,6 @@ let opener = _____WB$wombat$assign$function_____("opener");
   // Sacked (CM 97/98: "Sacked as manager of …"): the season ends there; a new game is the way on.
   function sackedScreen() {
     const l = S.league, rows = table(l, S.results), pos = rows.findIndex(r => r.club.n === S.club.n) + 1, my = rows[pos - 1];
-    if (!S.sackTracked) window.cmTrack('mobile_manager_sacked', { league: l.code, club: S.club.n, difficulty: S.difficulty, matchday: S.md, position: pos });
-    S.sackTracked = true;
     screen(header(e(S.club.n), dayLabel(Math.max(0, S.md - 1))), `<h3 class="daytitle">Sacked</h3>
       <div class="confirmbox">The board have decided that your services are no longer required. You have been sacked as manager of ${e(S.club.n)},
         ${ord(pos)} in the ${e(l.name)} after ${my.p} matches (won ${my.w}, drawn ${my.d}, lost ${my.l}).</div>`,
@@ -672,7 +668,6 @@ let opener = _____WB$wombat$assign$function_____("opener");
         <p><b>Championship Manager 97/98</b>Sports Interactive<br>Published by Eidos Interactive</p>
         <button class="fact" data-go="fact"><b>Did you know?</b><span>${e(fact())}</span></button></div>`,
       bar(btn('settings', 'Done', 'go', ' data-move="back"')), '', 'fwd');
-    window.cmTrack('mobile_credits_viewed', {});
   }
   // Board Confidence (a main screen tile), as CM 97/98's Overall Performance screen: the directors' verdict in words.
   function boardScreen() {
@@ -685,7 +680,6 @@ let opener = _____WB$wombat$assign$function_____("opener");
     S.view = 'board';
     screen(header(e(S.club.n), tag(), S.club), `<h3 class="daytitle">Overall Performance</h3><div class="confirmbox">${e(text)}</div>`,
       `<div class="qs-bar"><div class="qs-btns">${btn('hub', 'Done', 'go', ' data-move="back"')}</div></div>`, '', 'fwd');
-    window.cmTrack('mobile_board_viewed', { matchday: S.md, board: Math.round(b), difficulty: S.difficulty });
   }
 
   // The player page, after CM 97/98's Playing Skills screen: name (club), his positions in words, born,
@@ -824,8 +818,6 @@ let opener = _____WB$wombat$assign$function_____("opener");
     S.results = []; S.md = 0; S.changes = 0; S.injuries = 0; S.reds = 0; S.bookings = 0; S.subsUsed = 0; S.news = []; S.log = [];
     S.board = 60; S.sacked = false; S.htChanges = 0;   // the board start out willing to give you a chance
     S.squad.forEach(p => { p.cond = 100; p.out = 0; p.ban = 0; p.yel = 0; p.tired = false; });
-    window.cmTrack('mobile_season_started', { league: S.league.code, club: S.club.n, difficulty: S.difficulty, formation: S.formation, tactic: S.tactic, predicted: predicted(S.league, S.club),
-      subs: S.shirts.slice(11).filter(x => x !== null).length, auto_picks: S.autoFills });
     dayScreen(0, 'pre', 'fwd');
   }
 
@@ -1087,8 +1079,6 @@ let opener = _____WB$wombat$assign$function_____("opener");
     const pos = rows.findIndex(r => r.club.n === me) + 1, my = rows[pos - 1], pred = predicted(l, S.club);
     const [tone, text] = verdict(l, pred, pos);
     S.share = `I took ${me} to ${ord(pos)} in the ${l.name} (${my.pts} pts) in Championship Manager 26/27's Quick Season`;
-    if (!S.finished) window.cmTrack('mobile_season_finished', { league: l.code, club: me, formation: S.formation, tactic: S.tactic, position: pos, predicted: pred, points: my.pts,
-      changes: S.changes, injuries: S.injuries, sent_off: S.reds, bookings: S.bookings, subs_used: S.subsUsed, auto_picks: S.autoFills, half_time_changes: S.htChanges, difficulty: S.difficulty, board: Math.round(S.board), speed: S.fast ? 'fast' : 'full' });
     S.finished = true;
     screen(header('End of Season', l.name), `
         <p class="verdict ${tone}">${e(text)}</p>
@@ -1099,9 +1089,9 @@ let opener = _____WB$wombat$assign$function_____("opener");
 
   async function share(text, url, kind) {
     try {
-      if (navigator.share) { await navigator.share({ text, url }); window.cmTrack(kind, { method: 'share' }); return; }
+      if (navigator.share) { await navigator.share({ text, url }); return; }
     } catch (err) { if (err.name === 'AbortError') return; }
-    try { await navigator.clipboard.writeText(`${text} ${url}`.trim()); window.cmTrack(kind, { method: 'copy' }); alert('Copied: paste it wherever you like'); }
+    try { await navigator.clipboard.writeText(`${text} ${url}`.trim()); alert('Copied: paste it wherever you like'); }
     catch { prompt('Copy this link', url); }
   }
 
