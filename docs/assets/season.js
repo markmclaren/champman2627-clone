@@ -608,15 +608,29 @@
       : cycle('formation', S.formation, 'Formation') + cycle('style', TACTICS[S.tactic].label, 'Style') + (D().auto ? btn('auto', 'Auto<br>Pick') : '')}</div></div>`;
   }
   const views = () => Object.keys(VIEWS);   // values show on every difficulty: the original shows them, while hiding ability
+  const nextMatch = () => {
+    if (!S.days || !S.club) return null;
+    const md = Math.min(S.md, S.days.length - 1);
+    if (S.started && S.md >= S.days.length) return null;
+    const games = S.days[md];
+    if (!games) return null;
+    const game = games.find(g => g[0] === S.club.n || g[1] === S.club.n);
+    if (!game) return null;
+    const isHome = game[0] === S.club.n;
+    const oppName = isHome ? game[1] : game[0];
+    const oppClub = clubBy(oppName);
+    return { md, game, isHome, oppName, oppClub };
+  };
+
   // Done: back to the main screen when you came from it; on the way to a match, Start Season or Done (then Confirm Selection).
   function teamFoot(here) {
     const issue = problems(), off = issue ? ' disabled' : '';
     const done = S.teamMode === 'hub' ? btn('hub', 'Done', 'go', ' data-move="back"') : !S.started ? btn('start', 'Start Season', 'go', off) : btn('done', 'Done', 'go', off);
-    const row = here === 'squad' ? btn('mine', 'Fixtures &amp;<br>Results') + (S.started ? btn('league', 'View<br>League') : '')
+    const opp = nextMatch();
+    const oppBtn = btn('opp_squad', 'Opposition<br>Squad', '', !opp ? ' disabled' : '');
+    const row = here === 'squad' ? oppBtn + btn('mine', 'Fixtures &amp;<br>Results') + (S.started ? btn('league', 'View<br>League') : '')
       : btn('squad', 'Squad') + btn('undo', 'Undo<br>Changes');
-    const together = here === 'squad' && !S.started;   // pre-season: Fixtures & Results beside the one button
-    return `<div class="qs-bar">${issue ? `<p class="qs-issue">${e(issue)}</p>` : ''}${together ? `<div class="qs-btns">${row}${done}</div>`
-      : `<div class="qs-btns">${row}</div><div class="qs-btns">${done}</div>`}</div>`;
+    return `<div class="qs-bar">${issue ? `<p class="qs-issue">${e(issue)}</p>` : ''}<div class="qs-btns">${row}</div><div class="qs-btns">${done}</div></div>`;
   }
   const snapshot = () => { S.undo = { shirts: [...S.shirts], formation: S.formation, tactic: S.tactic }; };
   const tag = () => S.started ? dayLabel(S.md) : 'Pre-season';
@@ -647,6 +661,84 @@
     }).join('');
     screen(header(e(S.club.n), tag(), S.club) + teamTop('squad'),
       `${S.news?.length && S.md ? `<div class="newsbar">${S.news.map(e).join(' · ')}</div>` : ''}<div class="sqlist" style="--rows:${Math.ceil(S.squad.length / 2)}">${rows}</div>`, teamFoot('squad'), '', move);
+  }
+
+  // Opposition Squad: read-only view of the upcoming match opponent
+  // General Info (Stadium, Capacity, Manager Name) and authentic CM 97/98 team sheet
+  async function oppSquadScreen(move = 'fwd') {
+    const opp = nextMatch();
+    if (!opp || !opp.oppClub) return squadScreen();
+    const l = S.league;
+    if (!squads[l.code]) {
+      try { squads[l.code] = await (await fetch(`assets/season/${l.code}.json?v=${v}`)).json(); }
+      catch { return squadScreen(); }
+    }
+    S.view = 'opp_squad';
+    if (!views().includes(S.oppSqView)) S.oppSqView = 'positions';
+    const c = opp.oppClub;
+    const rawSq = squads[l.code]?.[c.n] || [];
+    const oppSquad = rawSq.map(([name, label, a, fit, sta, inj, con, age, nat, attrs, born, caps, goals, value]) => ({
+      name, label: label.replace(/^GK [RLC]+$/, 'GK'), a, fit, sta, inj, con, age, nat, attrs, born, caps, goals,
+      value: value || 0, cond: 100, out: 0, ban: 0
+    }));
+
+    const xi = lineup(c.n);
+    const xiNames = new Set(xi.map(p => p.name));
+    const starters = oppSquad.filter(p => xiNames.has(p.name)).sort((x, y) => {
+      const isGKx = x.label === 'GK', isGKy = y.label === 'GK';
+      if (isGKx !== isGKy) return isGKx ? -1 : 1;
+      return y.a - x.a;
+    });
+    const bench = oppSquad.filter(p => !xiNames.has(p.name)).sort((x, y) => y.a - x.a);
+    const ordered = [...starters, ...bench];
+    S.oppSquad = ordered;
+    S.oppClub = c;
+
+    const rows = ordered.map((p, i) => {
+      const isPicked = i < 11;
+      const isSub = i >= 11 && i < 16;
+      const num = isPicked ? (i + 1) : isSub ? 'SUB' : '–';
+      const value = S.oppSqView === 'value' ? money(p.value)
+        : S.oppSqView === 'condition' ? '100%'
+        : e(p.label);
+      return `<button class="sqrow readonly${isPicked ? ' picked' : ''}${isSub ? ' sub' : ''}" data-oppplayer="${i}"><span class="num">${num}</span><span class="badge2"></span><span class="nm">${e(short(p.name))}</span><span class="ps">${value}</span></button>`;
+    }).join('');
+
+    const nextInfo = opp.isHome ? `Home vs ${e(c.s)}` : `Away at ${e(c.s)}`;
+    const topBar = `<div class="qs-bar top"><div class="qs-btns">
+      ${cycle('oppview', ...VIEWS[S.oppSqView].split(' '), S.oppSqView !== 'positions')}
+      <span class="cmbtn please">Opposition Squad</span>
+    </div></div>`;
+    const infoCard = `<div class="opp-info-card">
+      <div class="opp-info-row">
+        <div class="opp-info-cell"><span class="lbl">Ground:</span> <b class="val">${e(c.st || 'Local Stadium')}</b></div>
+        <div class="opp-info-cell"><span class="lbl">Capacity:</span> <b class="val">${c.cap ? c.cap.toLocaleString('en-GB') : '–'}</b></div>
+      </div>
+      <div class="opp-info-row">
+        <div class="opp-info-cell"><span class="lbl">Manager:</span> <b class="val">${e(c.m || 'Vacant')}</b></div>
+        <div class="opp-info-cell"><span class="lbl">Next Match:</span> <b class="val">${tag()} · ${nextInfo}</b></div>
+      </div>
+    </div>`;
+
+    screen(header(e(c.n), tag(), c) + topBar,
+      `${infoCard}<div class="sqlist" style="--rows:${Math.ceil(ordered.length / 2)}">${rows}</div>`,
+      `<div class="qs-bar"><div class="qs-btns">${btn('squad', 'Back', 'go', ' data-move="back"')}</div></div>`, '', move);
+  }
+
+  function oppPlayerScreen(pi) {
+    if (!S.oppSquad || !S.oppSquad[pi]) return oppSquadScreen('back');
+    S.back = 'opp_squad'; S.view = 'opp_player';
+    const p = S.oppSquad[pi], c = S.oppClub || S.club, at = p.attrs || [];
+    const cell = ([label, k]) => `<tr${k === null ? ' class="na"' : ''}><td>${label}</td><td class="n">${k === null ? '–' : at[k] ?? '–'}</td></tr>`;
+    const [left, right] = (p.label === 'GK' ? GK_SKILLS : OUTFIELD_SKILLS).map(col => col.map(cell).join(''));
+    const intl = p.caps ? ` (${p.caps} caps/${p.goals} gls)` : '';
+    screen(header(`${e(p.name)} (${e(c.s)})`, tag(), c),
+      `<div class="posbar">${e(positionWords(p.label))}</div>
+       <p class="born">${p.born ? `Born ${e(p.born)} (Age ${p.age}). ` : p.age ? `Age ${p.age}. ` : ''}${e(p.nat || '')}${intl}.</p>
+       <div class="skills"><table>${left}</table>
+         <table>${right}<tr><td colspan="2" class="cond">Physical condition 100%</td></tr>
+         <tr><td colspan="2" class="cond">Estimated Value: ${money(p.value)}</td></tr></table></div>`,
+      `<div class="qs-bar"><div class="qs-btns">${btn('opp_squad', 'Back', 'go', ' data-move="back"')}</div></div>`, '', 'fwd');
   }
 
   // Tactics: the pitch, with each position and his name (tap a position to choose who plays there).
@@ -823,7 +915,8 @@
   }
   let drag = null;
   root.addEventListener('pointerdown', ev => {
-    const handle = ev.target.closest(DRAGGABLE); if (!handle) return;
+    if (S.view === 'opp_squad' || S.view === 'opp_player') return;
+    const handle = ev.target.closest(DRAGGABLE); if (!handle || handle.closest('.readonly')) return;
     const el = handle.closest('.sqrow') || handle;
     drag = { el, x: ev.clientX, y: ev.clientY, moved: false };
     try { handle.setPointerCapture(ev.pointerId); } catch {}
@@ -1245,7 +1338,7 @@
     catch { prompt('Copy this link', url); }
   }
 
-  const redraw = () => (S.view === 'tactics' ? tacticsScreen : squadScreen)();
+  const redraw = () => (S.view === 'tactics' ? tacticsScreen : S.view === 'opp_squad' ? oppSquadScreen : squadScreen)();
   const turn = (list, now, step) => list[(list.indexOf(now) + step + list.length) % list.length];
   root.addEventListener('click', ev => {
     const b = ev.target.closest('button, .sheet'); if (!b || b.disabled) return;
@@ -1258,13 +1351,17 @@
     else if (d.htoff) halftimeOff(+d.htoff);
     else if (d.hton) halftimeOn(+d.hton);
     else if (d.player) { if (S.dragged) S.dragged = false; else if (ev.target.closest('.nm, .scorer-link')) playerScreen(+d.player); else placeSheet(+d.player); }
+    else if (d.oppplayer) { oppPlayerScreen(+d.oppplayer); }
     else if (d.place) placeSheet(+d.place);
     else if (d.shirt) { giveShirt(S.sheetPlayer, +d.shirt); redraw(); }
     else if (d.slot) { if (S.dragged) S.dragged = false; else slotSheet(+d.slot); }
     else if (d.pick) { giveShirt(+d.pick, S.sheetSlot); redraw(); }
     else ({
       countries: () => countries(move), leagues: () => leagues(move), clubs: () => clubs(move), close: () => root.querySelector('.sheet')?.remove(),
-      squad: () => squadScreen(S.view === 'tactics' ? '' : 'back'), tactics: () => tacticsScreen(),
+      opp_squad: () => oppSquadScreen(move),
+      'oppview-': () => { S.oppSqView = turn(views(), S.oppSqView || 'positions', -1); oppSquadScreen(); },
+      'oppview+': () => { S.oppSqView = turn(views(), S.oppSqView || 'positions', 1); oppSquadScreen(); },
+      squad: () => squadScreen(S.view === 'tactics' || S.view === 'opp_squad' || S.view === 'opp_player' ? '' : 'back'), tactics: () => tacticsScreen(),
       'formation-': () => { setFormation(turn(FORMATIONS, S.formation, -1)); tacticsScreen(); }, 'formation+': () => { setFormation(turn(FORMATIONS, S.formation, 1)); tacticsScreen(); },
       'style-': () => { S.tactic = turn(STYLES, S.tactic, -1); tacticsScreen(); }, 'style+': () => { S.tactic = turn(STYLES, S.tactic, 1); tacticsScreen(); },
       auto: () => { autoFill(); redraw(); },

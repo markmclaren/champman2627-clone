@@ -88,8 +88,6 @@ html.touch .touch-only { display: block; }   /* html.touch: site.js's wider test
 .minimenu { display: flex; gap: 4px; justify-content: center; flex-wrap: wrap; padding: 18px 16px 20px; }
 .minimenu .tile { min-height: 0; font-size: 14px; padding: 7px 14px; }
 .minimenu .tile.on { background: var(--cm-tile-edge); }
-.page-home .minimenu { display: none; }
-.page-season .minimenu .tile.go { display: none; }   /* Quick Season: no Play Now / Quick Season tiles */
 .page-home main { padding-top: 18px; }
 
 /* "Please Select" bar: says what's under the pointer (on Play, the game's save status) */
@@ -325,6 +323,17 @@ body.page-season { height: 100vh; height: 100dvh; display: flex; flex-direction:
   font: 700 15px var(--game); cursor: pointer; text-shadow: 1px 1px 0 #000; }
 .sqrow .num { font-size: 13px; }
 .newsbar { background: rgba(154, 16, 24, .85); color: #fff; padding: 6px 10px; font-size: 14px; text-shadow: 1px 1px 0 #000; border: 1px solid #000; }
+.opp-info-card { background: var(--cm-panel); border: 2px solid var(--cm-tile-edge); padding: 6px 10px; margin-bottom: 4px; box-shadow: inset 1px 1px 0 rgba(255, 255, 255, .1); }
+.opp-info-row { display: flex; justify-content: space-between; gap: 12px; font-size: 14px; line-height: 1.4; color: #fff; text-shadow: 1px 1px 0 #000; }
+.opp-info-cell { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.opp-info-cell .lbl { color: #9a9cab; margin-right: 4px; font-weight: 400; }
+.opp-info-cell .val { color: var(--cm-title); font-weight: 700; }
+@media (max-width: 480px) {
+  .opp-info-row { flex-direction: column; gap: 2px; font-size: 12px; }
+  .opp-info-card { padding: 4px 6px; }
+}
+.sqrow.readonly { cursor: pointer; }
+.sqrow.readonly:active { background: rgba(6, 39, 172, .45); }
 .tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; flex: none; }
 .tabs button { padding: 9px; font: 16px var(--game); color: #fff; background: var(--cm-tile); border: 2px solid var(--cm-tile-edge); cursor: pointer; text-shadow: 1px 1px 0 #000; }
 .tabs button.on { background: var(--cm-tile-edge); color: var(--cm-title); }

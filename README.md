@@ -1,6 +1,6 @@
 # Championship Manager 26/27 — Standalone Web Edition
 
-An unofficial, fully reconstructed 2026/27 edition of Championship Manager running **100% in pure JavaScript** in your web browser.
+An unofficial, partially reconstructed 2026/27 edition of Championship Manager (Quick Season) running in pure JavaScript in your web browser.
 
 Originally hosted at `champman2627.co.uk`, the site went offline and portions of the client-side engine and web assets were recovered from the [Internet Archive's Wayback Machine](https://web.archive.org/web/*/https://www.champman2627.co.uk/*). This standalone package recreates the **Quick Season** engine and the entire 2026/27 modern database with zero external dependencies, no DOS emulators, and no tracking.
 

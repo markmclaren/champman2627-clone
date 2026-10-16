@@ -4,14 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
-<title>Quick Season · CM 26/27</title>
+<title>Championship Manager 26/27 · Standalone Web Edition</title>
 <link rel="icon" href="favicon.ico" sizes="any">
 <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">
 <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
 <link rel="stylesheet" href="assets/site.css">
-
 </head>
-<body class="page-season" data-page="season" data-build="39">
+<body class="page-home" data-page="home" data-build="39">
 <div id="bg"></div>
 
 <header class="titlebar">
@@ -20,28 +19,177 @@
   <span class="datetag" id="shortDate"></span>
 </header>
 
-
 <nav class="minimenu" aria-label="Site">
-  <a class="tile" href="index.html" data-page="home" data-tip="Back to the main screen">Home</a>
+  <a class="tile on" href="index.html" data-page="home" data-tip="Back to the main screen">Home</a>
   <a class="tile" href="how-to-play.html" data-page="how-to-play" data-tip="What you need, saving, how long things take, and common questions">How to Play / FAQs</a>
   <a class="tile" href="see-the-game.html" data-page="see-the-game" data-tip="Stills from the game, with what's new">View Screenshots</a>
   <a class="tile" href="database.html" data-page="database" data-tip="How the 2026/27 players, clubs and managers break down">Explore Database</a>
   <a class="tile" href="changes.html" data-page="changes" data-tip="Every fix and change since launch, and known issues">Latest Updates</a>
-  <a class="tile" href="feedback.html" data-page="feedback" data-tip="Report a bug, wrong player data, or an idea">Share Feedback</a>
+  <a class="tile" href="feedback.html" data-page="feedback" data-tip="Community discussions and data source links">Community</a>
   <a class="tile go" href="quick-season.html" data-page="play" data-tip="Play the game in this browser">Play Quick Season</a>
 </nav>
 
 <main>
-<div id="season" class="season" aria-live="polite"><p class="qs-hint">Loading the leagues…</p></div>
-<noscript><p class="screen-sub">Quick Season needs JavaScript switched on.</p></noscript>
-<div class="rotate-note" role="alert"><div><span class="rotate-icon" aria-hidden="true"></span><p>Turn your phone upright to play</p><small>Quick Season is laid out for portrait</small></div></div>
+<div class="screen-title" style="font-size: clamp(24px, 3.5vw, 36px);">Championship Manager 26/27</div>
+<p class="screen-sub" style="font-size: 16px; max-width: 760px;">
+  The iconic 90s football management simulation, partially reconstructed in pure JavaScript through the standalone Quick Season engine. Experience the authentic 2026/27 season with real squads, retro CM 97/98 tactics, and live match drama directly in your browser.
+</p>
+
+<p class="cta" style="margin: 20px 0 28px; text-align: center;">
+  <a class="btn go" style="font-size: 20px; padding: 12px 32px;" href="quick-season.html" data-tip="Take over a club and kick off your 2026/27 campaign!">Play Quick Season Now ›</a>
+</p>
+
+<div class="grid">
+  <div class="panel s6">
+    <h2>100% Authentic 2026/27 Database</h2>
+    <div class="body">
+      <p><b>7,916 Real Players Across 394 Clubs:</b> Every single youth placeholder entry has been completely eliminated. All 22 playable divisions now field authentic real-world squads with genuine player attributes, tactical suitability, and stamina/consistency ratings.</p>
+      <p><b>Full Lower Tier &amp; Continental Coverage:</b> Complete rosters populated from the Premier League and La Liga down to English League Two, Scottish League Two, Dutch Eerste Divisie, Portuguese Liga 2, Belgian Challenger Pro League, and continental B-teams.</p>
+      <p><b>Resolved Attribute Sentinels:</b> Every player features balanced CM 97/98 playing skills (1–20), realistic £100m–£150m elite valuations (Haaland, Mbappé, Bellingham, Yamal), and zero sentinel artifacts.</p>
+    </div>
+  </div>
+
+  <div class="panel s6" id="pinfo">
+    <h2>Featured Star Player <button class="btn sm" id="nextPlayer" data-tip="Cycle to another star player" style="float: right;">Next Player ›</button></h2>
+    <div class="body" id="pcardBody">
+      <!-- Populated dynamically by site.js from #players-data -->
+    </div>
+  </div>
+
+  <div class="panel s6">
+    <h2>Pure JavaScript Match &amp; Season Engine</h2>
+    <div class="body">
+      <p><b>Live Match Commentary &amp; Tactical Drama:</b> Fast-paced Poisson-powered match simulation with minute-by-minute text commentary, momentum bars, substitutions, injuries, and yellow/red cards.</p>
+      <p><b>Authentic Tactical Styles:</b> Classic CM 97/98 formations (4-4-2, 4-3-3, 3-5-2, 5-3-2, 4-5-1) with <b>Balanced</b>, <b>Attacking</b> (+20% xG / +15% opp xG), and <b>Defensive</b> styles.</p>
+      <p><b>League Top Scorers &amp; Board Confidence:</b> Player-specific scoring probabilities based on role and ability, season appearance/goal leaderboards, and realistic director confidence tracking.</p>
+    </div>
+  </div>
+
+  <div class="panel s6">
+    <h2>22 Playable Leagues Across 9 Nations</h2>
+    <div class="body">
+      <table class="cm">
+        <tbody>
+          <tr><th>Country</th><th>Divisions</th><th class="n">Clubs</th></tr>
+          <tr><td>England</td><td>Premier League, Championship, League One, League Two</td><td class="n">92</td></tr>
+          <tr><td>Scotland</td><td>Premiership, Championship, League One, League Two</td><td class="n">40</td></tr>
+          <tr><td>Spain</td><td>La Liga, La Liga 2</td><td class="n">42</td></tr>
+          <tr><td>Italy</td><td>Serie A, Serie B</td><td class="n">38</td></tr>
+          <tr><td>Germany</td><td>Bundesliga, 2. Bundesliga</td><td class="n">36</td></tr>
+          <tr><td>France</td><td>Ligue 1, Ligue 2</td><td class="n">40</td></tr>
+          <tr><td>Netherlands</td><td>Eredivisie, Eerste Divisie</td><td class="n">36</td></tr>
+          <tr><td>Portugal</td><td>Primeira Liga, Liga Portugal 2</td><td class="n">36</td></tr>
+          <tr><td>Belgium</td><td>Pro League, Challenger Pro League</td><td class="n">34</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="panel s12">
+    <h2>Explore the Project</h2>
+    <div class="body">
+      <p>Championship Manager 26/27 is an open, client-side fan preservation project built with zero external dependencies, no DOS emulators, and zero telemetry.</p>
+      <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px;">
+        <a class="btn" href="how-to-play.html">How to Play &amp; FAQs</a>
+        <a class="btn" href="see-the-game.html">View Game Screenshots</a>
+        <a class="btn" href="database.html">Explore Database Breakdown</a>
+        <a class="btn" href="changes.html">Changelog &amp; Updates</a>
+        <a class="btn" href="feedback.html">Community &amp; Data Sources</a>
+      </div>
+    </div>
+  </div>
+</div>
 
 </main>
 
 <p class="foot legal">Unofficial, not-for-profit fan project. Not affiliated with or endorsed by Sports Interactive, Square Enix or Eidos. Championship Manager is a trademark of Square Enix.</p>
 
 <div class="status" id="status" role="status">Please Select</div>
+
+<script type="application/json" id="players-data">
+[
+  {
+    "name": "Erling Haaland",
+    "club": "Manchester City",
+    "pos": "S C",
+    "age": 26,
+    "nation": "Norway",
+    "bg": "#6cabdd",
+    "fg": "#1c2c5b",
+    "attrs": [["Pace", 20], ["Shooting", 20], ["Strength", 20], ["Heading", 19], ["Technique", 17], ["Flair", 16]]
+  },
+  {
+    "name": "Jude Bellingham",
+    "club": "Real Madrid",
+    "pos": "AM LC",
+    "age": 23,
+    "nation": "England",
+    "bg": "#ffffff",
+    "fg": "#001a4e",
+    "attrs": [["Pace", 18], ["Shooting", 18], ["Passing", 17], ["Dribbling", 17], ["Stamina", 19], ["Flair", 19]]
+  },
+  {
+    "name": "Kylian Mbappé",
+    "club": "Real Madrid",
+    "pos": "S C",
+    "age": 27,
+    "nation": "France",
+    "bg": "#ffffff",
+    "fg": "#001a4e",
+    "attrs": [["Pace", 20], ["Shooting", 19], ["Dribbling", 20], ["Technique", 20], ["Flair", 20], ["Off the Ball", 19]]
+  },
+  {
+    "name": "Lamine Yamal",
+    "club": "Barcelona",
+    "pos": "AM/F R",
+    "age": 19,
+    "nation": "Spain",
+    "bg": "#a50044",
+    "fg": "#edbb00",
+    "attrs": [["Pace", 18], ["Dribbling", 20], ["Technique", 19], ["Flair", 20], ["Passing", 18], ["Vision", 18]]
+  },
+  {
+    "name": "Harry Kane",
+    "club": "Bayern München",
+    "pos": "S C",
+    "age": 33,
+    "nation": "England",
+    "bg": "#dc052d",
+    "fg": "#ffffff",
+    "attrs": [["Shooting", 20], ["Passing", 19], ["Technique", 19], ["Heading", 18], ["Composure", 20], ["Strength", 17]]
+  },
+  {
+    "name": "Cole Palmer",
+    "club": "Chelsea",
+    "pos": "AM RC",
+    "age": 24,
+    "nation": "England",
+    "bg": "#034694",
+    "fg": "#ffffff",
+    "attrs": [["Passing", 19], ["Flair", 19], ["Technique", 19], ["Shooting", 18], ["Vision", 19], ["Composure", 19]]
+  },
+  {
+    "name": "Bukayo Saka",
+    "club": "Arsenal",
+    "pos": "AM/F R",
+    "age": 25,
+    "nation": "England",
+    "bg": "#ef0107",
+    "fg": "#ffffff",
+    "attrs": [["Pace", 18], ["Dribbling", 19], ["Work Rate", 19], ["Technique", 18], ["Crossing", 18], ["Passing", 17]]
+  },
+  {
+    "name": "Vinícius Júnior",
+    "club": "Real Madrid",
+    "pos": "AM/F L",
+    "age": 26,
+    "nation": "Brazil",
+    "bg": "#ffffff",
+    "fg": "#001a4e",
+    "attrs": [["Pace", 20], ["Dribbling", 20], ["Flair", 20], ["Shooting", 18], ["Agility", 19], ["Technique", 19]]
+  }
+]
+</script>
 <script src="assets/site.js"></script>
-<script src="assets/season.js"></script>
 </body>
 </html>
