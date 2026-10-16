@@ -62,6 +62,44 @@ In your repository settings on GitHub:
 
 ---
 
+## Gameplay Rules & Scope (Quick Season)
+
+Quick Season was designed as a lightweight, fast-playing tactical match and season simulator. Understanding its scope and restrictions helps set proper expectations:
+
+### 1. No Transfer Market (Static Squads)
+* **No Buying, Selling, or Scouting**: Quick Season does not contain a transfer market, bidding engine, contract negotiations, or loan system.
+* You manage the authentic initial **2026/27 squad** of whichever club you select for the entire league campaign.
+* Player estimated values (e.g. £140m, £850K) are displayed on squad screens for authentic prestige and tactical context, but transfer budgets and club bank balances are not part of the Quick Season engine *(the full transfer market was exclusive to the desktop DOS edition)*.
+
+### 2. Matchday Squad Selection
+* **16-Player Matchday Squad**: Exactly 11 starters (numbered 1–11) and up to 5 substitutes on the bench (indices 11–15), matching classic CM 97/98 bench limits.
+* **Mandatory Goalkeeper**: Slot 0 must be occupied by a goalkeeper.
+* **Eligible Lineups**: You cannot kick off a match if any of the 11 starting shirts are empty or if a starter is sidelined by injury or suspension.
+* **Positional Effectiveness**: Outfield players have specific suitability scores `[GK, DEF, MID, FWD]` (0–100). Players placed out of position suffer significant performance and rating penalties.
+
+### 3. In-Match Rules & Substitutions
+* **3 Substitutions Max**: Up to 3 substitutions per match chosen from your 5 named bench players (made at half-time or during injury stoppages). Substituted players cannot re-enter.
+* **Red Cards**: Sent-off players leave the pitch immediately; your team plays a man down (10 men or fewer) and cannot replace them.
+
+### 4. Injuries, Fitness & Disciplinary Bans
+* **Fatigue & Condition**: Playing 90 minutes reduces physical condition based on player stamina. Low condition (<80%) noticeably degrades match performance and increases injury risk, requiring squad rotation.
+* **Injuries**: In-match injuries sideline players for multiple fixtures based on their `injury proneness` (1–20).
+* **Disciplinary Suspensions**:
+  * **Two yellow cards** in one match = red card + **1-match ban**.
+  * **Straight red card** = **3-match ban**.
+  * **Accumulated cautions** = **1-match ban** for every 5 bookings accrued across the season.
+
+### 5. Difficulty Levels
+* **Easy**: Includes **Auto Pick**, lists players sorted by best fit first, assistant automatically subs tired players, and the board will not sack you.
+* **Normal**: Includes **Auto Pick** and best-fit sorting, realistic opponent strength, tired players stay on unless manually changed, and the board can sack you for prolonged poor form.
+* **Hard (Classic CM 97/98)**:
+  * **No Auto Pick** button (all squad selections must be manual).
+  * **No best-fit sorting hints** (players listed alphabetically).
+  * Realistic opponent strength boost.
+  * Very strict board expectations — poor runs of form lead directly to the sack.
+
+---
+
 ## Repository Structure
 
 ```text
