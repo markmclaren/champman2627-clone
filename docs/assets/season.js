@@ -260,6 +260,27 @@
   }
   const keeperName = (G, side) => side === G.side ? S.squad[G.lineup[0] ?? starters()[0]]?.name || 'the keeper' : G.oppXI[0]?.name || 'the keeper';
 
+  function pickScorer(club) {
+    const xi = lineup(club);
+    if (!xi || !xi.length) return { name: 'Unknown' };
+    const outfield = xi.slice(1);
+    if (!outfield.length) return xi[0];
+    const weight = p => {
+      const line = p.fit ? p.fit.indexOf(Math.max(...p.fit)) : 2;
+      return ([0.01, 0.6, 2.5, 6.0][line] || 1) * Math.max(0.2, (p.a || 100) / 100);
+    };
+    const tot = outfield.reduce((sum, p) => sum + weight(p), 0);
+    let x = S.rng() * tot;
+    return outfield.find(p => (x -= weight(p)) < 0) || outfield[0];
+  }
+  function addScorerGoal(name, club) {
+    if (!name || name === 'Unknown') return;
+    if (!S.scorers) S.scorers = {};
+    const key = `${name}|${club}`;
+    if (!S.scorers[key]) S.scorers[key] = { name, club, goals: 0 };
+    S.scorers[key].goals++;
+  }
+
   // Full time: the matchday's results, then tiredness by minutes played, injuries, the board's verdict.
   function finishDay(G) {
     const day = S.pendingDay, rng = S.rng, news = [];
@@ -270,13 +291,23 @@
       G.spans.forEach(([on, off], pi) => {
         const p = S.squad[pi], tire = Math.max(3, 22 - (p.sta || 10)) * (off - on) / 90;
         p.cond -= G.line.get(pi) === 0 ? tire / 3 : tire;   // goalkeepers barely tire
+        p.sApps = (p.sApps || 0) + 1;
       });
+      G.events.forEach(ev => {
+        if (ev.kind === 'goal' && ev.side === G.side) {
+          const p = S.squad.find(x => x.name === ev.p.name);
+          if (p) p.sGoals = (p.sGoals || 0) + 1;
+        }
+      });
+      const oppGoals = G.side === 'h' ? G.score[1] : G.score[0];
+      if (oppGoals === 0 && G.lineup[0] !== null && S.squad[G.lineup[0]]) {
+        S.squad[G.lineup[0]].sClean = (S.squad[G.lineup[0]].sClean || 0) + 1;
+      }
       G.injured.forEach(pi => {
         const p = S.squad[pi];
         p.out = 1 + Math.floor(rng() ** 2 * 8); S.injuries++;
         news.push(`${short(p.name)} injured: out for ${p.out} match${p.out > 1 ? 'es' : ''}`);
       });
-      S.squad.forEach(p => { if (p.ban) p.ban--; });   // bans are served in your own matches (this one counts), then today's are handed out
       G.sentOff.forEach(([pi, n]) => {
         const p = S.squad[pi];
         p.ban = Math.max(p.ban, n); S.reds++;
@@ -289,6 +320,35 @@
       });
       S.subsUsed += MAX_SUBS - G.subsLeft;
       boardAfter(G);
+    }
+    if (day) {
+      day.forEach(([h, a, hg, ag]) => {
+        if (G && (h === G.h && a === G.a)) {
+          G.events.forEach(ev => {
+            if (ev.kind === 'goal') {
+              const club = ev.side === 'h' ? G.h : G.a;
+              addScorerGoal(ev.p.name, club);
+            }
+          });
+        } else {
+          for (let g = 0; g < hg; g++) {
+            const p = pickScorer(h);
+            addScorerGoal(p.name, h);
+            if (!G && h === S.club.n) {
+              const sp = S.squad.find(x => x.name === p.name);
+              if (sp) sp.sGoals = (sp.sGoals || 0) + 1;
+            }
+          }
+          for (let g = 0; g < ag; g++) {
+            const p = pickScorer(a);
+            addScorerGoal(p.name, a);
+            if (!G && a === S.club.n) {
+              const sp = S.squad.find(x => x.name === p.name);
+              if (sp) sp.sGoals = (sp.sGoals || 0) + 1;
+            }
+          }
+        }
+      });
     }
     S.squad.forEach(p => { p.cond = Math.min(100, p.cond + 9); p.tired = p.cond < TIRED ? true : p.cond >= 85 ? false : p.tired; });
     S.news = news;
@@ -403,7 +463,7 @@
     try {
       localStorage.setItem(SAVE_KEY, JSON.stringify({ v: 1, league: S.league.code, club: S.club.n, formation: S.formation, tactic: S.tactic,
         shirts: names(S.shirts), undo: S.undo && { ...S.undo, shirts: names(S.undo.shirts) },
-        squad: S.squad.map(p => [p.name, p.cond, p.out, p.tired, p.ban, p.yel]), days: S.days, results: S.results, md: S.md, started: S.started, finished: S.finished,
+        squad: S.squad.map(p => [p.name, p.cond, p.out, p.tired, p.ban, p.yel, p.sApps || 0, p.sGoals || 0, p.sClean || 0]), scorers: S.scorers || {}, days: S.days, results: S.results, md: S.md, started: S.started, finished: S.finished,
         seed: S.seed, rng: S.rng.state(), changes: S.changes, injuries: S.injuries, reds: S.reds, bookings: S.bookings, subsUsed: S.subsUsed, autoFills: S.autoFills, fast: S.fast, news: S.news,
         difficulty: S.difficulty, board: S.board, sacked: S.sacked, htChanges: S.htChanges }));
     } catch {}   // private browsing or storage full: the game still plays, it just won't be kept
@@ -428,8 +488,8 @@
     S.league = data.leagues.find(x => x.code === sv.league);
     if (!await buildSquad(sv.club)) return;
     const index = Object.fromEntries(S.squad.map((p, pi) => [p.name, pi])), at = list => list.map(n => n === null ? null : index[n] ?? null);
-    sv.squad.forEach(([n, cond, out, tired, ban = 0, yel = 0]) => { const p = S.squad[index[n]]; if (p) Object.assign(p, { cond, out, tired, ban, yel }); });
-    Object.assign(S, { formation: sv.formation, tactic: sv.tactic, shirts: at(sv.shirts), days: sv.days, results: sv.results, md: sv.md, started: sv.started,
+    sv.squad.forEach(([n, cond, out, tired, ban = 0, yel = 0, sApps = 0, sGoals = 0, sClean = 0]) => { const p = S.squad[index[n]]; if (p) Object.assign(p, { cond, out, tired, ban, yel, sApps, sGoals, sClean }); });
+    Object.assign(S, { formation: sv.formation, tactic: sv.tactic, shirts: at(sv.shirts), scorers: sv.scorers || {}, days: sv.days, results: sv.results, md: sv.md, started: sv.started,
       finished: sv.finished, seed: sv.seed, rng: mulberry32(0), changes: sv.changes, injuries: sv.injuries, reds: sv.reds || 0, bookings: sv.bookings || 0, subsUsed: sv.subsUsed, autoFills: sv.autoFills, fast: sv.fast, news: sv.news || [],
       difficulty: sv.difficulty || 'normal', board: sv.board ?? 60, sacked: !!sv.sacked, htChanges: sv.htChanges || 0 });
     S.rng.set(sv.rng);
@@ -495,12 +555,12 @@
     }
     S.club = l.clubs.find(c => c.n === name);
     S.squad = (squads[l.code][name] || []).map(([name, label, a, fit, sta, inj, con, age, nat, attrs, born, caps, goals, value]) =>
-      ({ name, label: label.replace(/^GK [RLC]+$/, 'GK'), a, fit, sta, inj, con, age, nat, attrs, born, caps, goals, value: value || 0, cond: 100, out: 0, ban: 0, yel: 0, tired: false }));
+      ({ name, label: label.replace(/^GK [RLC]+$/, 'GK'), a, fit, sta, inj, con, age, nat, attrs, born, caps, goals, value: value || 0, cond: 100, out: 0, ban: 0, yel: 0, tired: false, sApps: 0, sGoals: 0, sClean: 0 }));
     return true;
   }
   async function pickClub(name) {
     if (!await buildSquad(name)) return;
-    S.formation = '4-4-2'; S.shirts = Array(SHIRTS).fill(null); S.tactic = 'balanced'; S.autoFills = 0; newSeason(); snapshot();
+    S.formation = '4-4-2'; S.shirts = Array(SHIRTS).fill(null); S.tactic = 'balanced'; S.autoFills = 0; S.scorers = {}; newSeason(); snapshot();
     hubScreen('fwd');
   }
 
@@ -509,7 +569,7 @@
   // Grey bars above and below, as in the original. Undo Changes puts the team back as it was when you
   // came to it.
   const cycle = (go, label, sub, on = false) => `<div class="cycler${on ? ' on' : ''}"><button data-go="${go}-" aria-label="Previous">‹</button><span>${label}<small>${sub}</small></span><button data-go="${go}+" aria-label="Next">›</button></div>`;
-  const VIEWS = { positions: 'Playing Positions', condition: 'Physical Condition', value: 'Estimated Value' };
+  const VIEWS = { positions: 'Playing Positions', condition: 'Physical Condition', stats: 'Season Stats', value: 'Estimated Value' };
   // Money as CM 97/98 shows it: £142.5m, £72.5m, £28m, £5.75m, £2.2m, £850K (value in £10,000 units)
   function money(v) {
     const m = v / 100, step = m >= 50 ? 2.5 : m >= 10 ? 1 : m >= 5 ? 0.25 : 0.1;
@@ -544,11 +604,18 @@
     S.view = 'squad'; if (!views().includes(S.sqView)) S.sqView = 'positions';
     const order = S.squad.map((p, pi) => pi);
     if (S.sqView === 'condition') order.sort((x, y) => (unavailable(S.squad[y]) ? -1 : S.squad[y].cond) - (unavailable(S.squad[x]) ? -1 : S.squad[x].cond));
+    if (S.sqView === 'stats') order.sort((x, y) => ((S.squad[y].sGoals || 0) * 100 + (S.squad[y].sApps || 0)) - ((S.squad[x].sGoals || 0) * 100 + (S.squad[x].sApps || 0)));
     if (S.sqView === 'value') order.sort((x, y) => S.squad[y].value - S.squad[x].value);
     const rows = order.map(pi => {
       const p = S.squad[pi], n = S.shirts.indexOf(pi);
       const badge = p.out ? `<span class="badge2 inj">Inj</span>` : p.ban ? `<span class="badge2 sus">Sus</span>` : p.cond < TIRED ? `<span class="badge2 tir">Tir</span>` : '<span class="badge2"></span>';
-      const value = S.sqView === 'condition' ? (unavailable(p) ? '–' : `${Math.round(p.cond)}%`) : S.sqView === 'value' ? money(p.value) : e(p.label);
+      const statStr = p.label === 'GK'
+        ? `${p.sApps || 0} app${(p.sApps || 0) === 1 ? '' : 's'} · ${p.sClean || 0} cs`
+        : `${p.sApps || 0} app${(p.sApps || 0) === 1 ? '' : 's'} · ${p.sGoals || 0} gls`;
+      const value = S.sqView === 'condition' ? (unavailable(p) ? '–' : `${Math.round(p.cond)}%`)
+        : S.sqView === 'value' ? money(p.value)
+        : S.sqView === 'stats' ? statStr
+        : e(p.label);
       return `<button class="sqrow${n >= 0 ? ' picked' : ''}${n >= 11 ? ' sub' : ''}" data-player="${pi}"><span class="num">${posOf(n)}</span>${badge}<span class="nm">${e(short(p.name))}</span><span class="ps">${value}</span></button>`;
     }).join('');
     screen(header(e(S.club.n), tag(), S.club) + teamTop('squad'),
@@ -609,7 +676,7 @@
     S.view = 'comp';
     const tile = (go, label, off) => `<button data-go="${go}"${off ? ' disabled' : ''}><span>${label}</span></button>`;
     screen(header(e(S.league.name), tag(), NAVY_BAR), `<h3 class="daytitle">Competition Info</h3>
-       <div class="choose hub">${tile('nextfx', 'Next<br>Fixtures', S.md >= S.days.length)}${tile('lastres', 'Last<br>Results', !S.md)}${tile('league', 'League<br>Table')}</div>`,
+       <div class="choose hub">${tile('nextfx', 'Next<br>Fixtures', S.md >= S.days.length)}${tile('lastres', 'Last<br>Results', !S.md)}${tile('league', 'League<br>Table')}${tile('scorers', 'Top<br>Scorers', !S.md)}</div>`,
       bar(btn('hub', 'Done', 'go', ' data-move="back"')), '', move);
   }
 
@@ -693,17 +760,22 @@
     return roles.split('/').map(r => ROLE_WORDS[r] || r).join('/') + (side && label !== 'GK' ? ` (${side})` : '');
   }
   function playerScreen(pi) {
-    S.back = S.view === 'tactics' ? 'tactics' : 'squad'; S.view = 'player';
+    S.back = S.view === 'tactics' ? 'tactics' : S.view === 'scorers' ? 'scorers' : 'squad'; S.view = 'player';
     const p = S.squad[pi], at = p.attrs || [];
     const cell = ([label, k]) => `<tr${k === null ? ' class="na"' : ''}><td>${label}</td><td class="n">${k === null ? '–' : at[k] ?? '–'}</td></tr>`;
     const [left, right] = (p.label === 'GK' ? GK_SKILLS : OUTFIELD_SKILLS).map(col => col.map(cell).join(''));
     const condition = unavailable(p) ? whyOut(p).replace(/^./, c => c.toUpperCase()) : `Physical condition ${Math.round(p.cond)}%`;
     const intl = p.caps ? ` (${p.caps} caps/${p.goals} gls)` : '';
+    const statsLine = p.label === 'GK'
+      ? `2026/27 Record: ${p.sApps || 0} app${(p.sApps || 0) === 1 ? '' : 's'} · ${p.sClean || 0} clean sheet${(p.sClean || 0) === 1 ? '' : 's'}${p.sGoals ? ` · ${p.sGoals} goal${p.sGoals === 1 ? '' : 's'}` : ''}`
+      : `2026/27 Record: ${p.sApps || 0} app${(p.sApps || 0) === 1 ? '' : 's'} · ${p.sGoals || 0} goal${(p.sGoals || 0) === 1 ? '' : 's'}`;
     screen(header(`${e(p.name)} (${e(S.club.s)})`, tag(), S.club),
       `<div class="posbar">${e(positionWords(p.label))}</div>
        <p class="born">${p.born ? `Born ${e(p.born)} (Age ${p.age}). ` : p.age ? `Age ${p.age}. ` : ''}${e(p.nat || '')}${intl}.</p>
        <div class="skills"><table>${left}</table>
-         <table>${right}<tr><td colspan="2" class="cond ${unavailable(p) ? 'bad' : ''}">${condition}</td></tr>${p.yel ? `<tr><td colspan="2" class="cond">Bookings this season ${p.yel}</td></tr>` : ''}</table></div>`,
+         <table>${right}<tr><td colspan="2" class="cond ${unavailable(p) ? 'bad' : ''}">${condition}</td></tr>
+         <tr><td colspan="2" class="cond">${statsLine}</td></tr>
+         ${p.yel ? `<tr><td colspan="2" class="cond">Bookings this season ${p.yel}</td></tr>` : ''}</table></div>`,
       `<div class="qs-bar"><div class="qs-btns">${btn(S.back, 'Done', 'go', ' data-move="back"')}</div></div>`, '', 'fwd');
   }
 
@@ -801,14 +873,14 @@
   function newSeason() {
     S.seed = Date.now() % 2147483647; S.rng = mulberry32(S.seed);
     S.days = fixtures(S.league.clubs.map(c => c.n), S.league.rounds, S.rng);
-    S.results = []; S.md = 0; S.started = false; S.finished = false;
+    S.results = []; S.md = 0; S.started = false; S.finished = false; S.scorers = {};
   }
 
   function start() {
     S.started = true;
-    S.results = []; S.md = 0; S.changes = 0; S.injuries = 0; S.reds = 0; S.bookings = 0; S.subsUsed = 0; S.news = []; S.log = [];
+    S.results = []; S.md = 0; S.changes = 0; S.injuries = 0; S.reds = 0; S.bookings = 0; S.subsUsed = 0; S.news = []; S.log = []; S.scorers = {};
     S.board = 60; S.sacked = false; S.htChanges = 0;   // the board start out willing to give you a chance
-    S.squad.forEach(p => { p.cond = 100; p.out = 0; p.ban = 0; p.yel = 0; p.tired = false; });
+    S.squad.forEach(p => { p.cond = 100; p.out = 0; p.ban = 0; p.yel = 0; p.tired = false; p.sApps = 0; p.sGoals = 0; p.sClean = 0; });
     dayScreen(0, 'pre', 'fwd');
   }
 
@@ -848,7 +920,7 @@
       bar(foot), '', move);
   }
 
-  const backTo = () => ({ day: 'backday', tactics: 'tactics', hub: 'hub', comp: 'comp' })[S.view] || 'squad';
+  const backTo = () => ({ day: 'backday', tactics: 'tactics', hub: 'hub', comp: 'comp', final: 'final' })[S.view] || 'squad';
   // Your season, after CM 97/98's club Fixtures screen: date box, opponent, H/A, competition, score.
   const shortDay = k => { const d = dateOf(k); return `${['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d.getUTCDay()]} ${d.getUTCDate()}.${d.getUTCMonth() + 1}.${String(d.getUTCFullYear()).slice(2)}`; };
   const shortComp = name => name.replace(/League/g, 'Lge').replace(/Championship/, 'Champ\'ship');
@@ -1057,10 +1129,68 @@
   }
 
   function leagueScreen() {
-    S.back = backTo(); S.view = 'league';
+    if (S.view !== 'scorers') S.back = backTo();
+    S.view = 'league';
     screen(`<div class="cmhead navyhead"><span class="datetag2 left">After matchday ${S.md}</span><h2>${e(S.league.name)}</h2><span class="datetag2">${dayLabel(Math.max(0, S.md - 1))}</span></div>`,
       rowsHtml(table(S.league, S.results), S.club.n),
-      bar(btn(S.back, 'Back', '', ' data-move="back"')), '', 'fwd');
+      bar(btn(S.back, 'Back', '', ' data-move="back"') + (S.md ? btn('scorers', 'Top<br>Scorers') : '')), '', 'fwd');
+    root.querySelector('tr.me')?.scrollIntoView({ block: 'center' });
+  }
+
+  function topScorers(limit = 20) {
+    if (!S.scorers) return [];
+    const list = Object.values(S.scorers).filter(x => x.goals > 0);
+    list.sort((a, b) => b.goals - a.goals || a.name.localeCompare(b.name));
+    return list.slice(0, limit);
+  }
+
+  function scorersHtml(list, me) {
+    if (!list || !list.length) {
+      return '<div class="ltable"><p style="text-align:center;padding:28px 12px;color:#d8d8d8;font-size:1.1em;">No goals scored yet this season.</p></div>';
+    }
+    const myClub = S.club.n;
+    const inTop = list.some(r => r.club === myClub);
+    let extraRow = '';
+    if (!inTop && S.scorers) {
+      const allScorers = Object.values(S.scorers).filter(x => x.goals > 0).sort((a, b) => b.goals - a.goals || a.name.localeCompare(b.name));
+      const myBestIdx = allScorers.findIndex(x => x.club === myClub);
+      if (myBestIdx >= 0) {
+        const myBest = allScorers[myBestIdx];
+        const pi = S.squad.findIndex(p => p.name === myBest.name);
+        const nameHtml = pi >= 0
+          ? `<button class="scorer-link" data-player="${pi}">${e(short(myBest.name))}</button>`
+          : e(short(myBest.name));
+        extraRow = `<tr class="cut"><td colspan="4" style="text-align:center;font-size:0.7em;color:#888;padding:4px 0;">· · ·</td></tr>` +
+          `<tr class="me"><td class="pb"><span class="posbox">${ord(myBestIdx + 1)}</span></td>` +
+          `<td class="cl" style="width:42%;">${nameHtml}</td>` +
+          `<td class="cl" style="width:32%;color:#2ec4c4;">${e(clubBy(myBest.club)?.s || myBest.club)}</td>` +
+          `<td class="pt" style="width:14%;"><span>${myBest.goals}</span></td></tr>`;
+      }
+    }
+
+    return `<div class="ltable"><table class="lt"><tr class="rec"><td colspan="4">Leading Goalscorers</td></tr>
+      <tr class="hd"><td colspan="2"></td><th style="width:32%;">Club</th><th style="width:14%;">Gls</th></tr>` +
+      list.map((r, i) => {
+        const isMe = r.club === myClub;
+        const clubS = clubBy(r.club)?.s || r.club;
+        const pi = isMe ? S.squad.findIndex(p => p.name === r.name) : -1;
+        const nameHtml = isMe && pi >= 0
+          ? `<button class="scorer-link" data-player="${pi}">${e(short(r.name))}</button>`
+          : e(short(r.name));
+        return `<tr class="${isMe ? 'me' : ''}"><td class="pb"><span class="posbox">${ord(i + 1)}</span></td>` +
+          `<td class="cl" style="width:42%;">${nameHtml}</td>` +
+          `<td class="cl" style="width:32%;color:#2ec4c4;">${e(clubS)}</td>` +
+          `<td class="pt" style="width:14%;"><span>${r.goals}</span></td></tr>`;
+      }).join('') + extraRow + '</table></div>';
+  }
+
+  function scorersScreen() {
+    if (S.view !== 'league') S.back = backTo();
+    S.view = 'scorers';
+    const list = topScorers();
+    screen(`<div class="cmhead navyhead"><span class="datetag2 left">After matchday ${S.md}</span><h2>Top Scorers</h2><span class="datetag2">${dayLabel(Math.max(0, S.md - 1))}</span></div>`,
+      scorersHtml(list, S.club.n),
+      bar(btn(S.back, 'Back', '', ' data-move="back"') + btn('league', 'League<br>Table')), '', 'fwd');
     root.querySelector('tr.me')?.scrollIntoView({ block: 'center' });
   }
 
@@ -1075,7 +1205,7 @@
         <p class="verdict ${tone}">${e(text)}</p>
         ${rowsHtml(rows, me)}
         <p class="muted ctr">The full game plays in a desktop or laptop browser. <button class="linkish" data-go="link">Send yourself the link</button></p>`,
-      bar(btn('share', 'Share') + btn('countries', 'New Club') + btn('again', 'Play Again', 'go')), '', 'fwd');
+      bar(btn('scorers', 'Top Scorers') + btn('share', 'Share') + btn('countries', 'New Club') + btn('again', 'Play Again', 'go')), '', 'fwd');
   }
 
   async function share(text, url, kind) {
@@ -1098,7 +1228,7 @@
     else if (d.level) { S.pickedLevel = d.level; root.querySelectorAll('[data-level]').forEach(x => x.classList.toggle('on', x === b)); root.querySelector('[data-go="begin"]').disabled = false; }
     else if (d.htoff) halftimeOff(+d.htoff);
     else if (d.hton) halftimeOn(+d.hton);
-    else if (d.player) { if (S.dragged) S.dragged = false; else if (ev.target.closest('.nm')) playerScreen(+d.player); else placeSheet(+d.player); }
+    else if (d.player) { if (S.dragged) S.dragged = false; else if (ev.target.closest('.nm, .scorer-link')) playerScreen(+d.player); else placeSheet(+d.player); }
     else if (d.place) placeSheet(+d.place);
     else if (d.shirt) { giveShirt(S.sheetPlayer, +d.shirt); redraw(); }
     else if (d.slot) { if (S.dragged) S.dragged = false; else slotSheet(+d.slot); }
@@ -1125,8 +1255,8 @@
       kickoff: () => S.whistle?.(),
       continue: () => S.sacked ? sackedScreen() : dayScreen(S.md - 1, 'post', 'fwd'),
       'day-': () => dayScreen(S.dayK - 1, S.dayMode, 'back'), 'day+': () => dayScreen(S.dayK + 1, S.dayMode, 'fwd'),
-      mine: clubFixtures, backday: () => dayScreen(S.dayK, S.dayMode, 'back'), league: leagueScreen,
-      again: () => { newSeason(); S.news = []; S.squad.forEach(p => { p.cond = 100; p.out = 0; p.ban = 0; p.yel = 0; p.tired = false; }); hubScreen('fwd'); },   // same club: a new season from the main screen
+      mine: clubFixtures, backday: () => dayScreen(S.dayK, S.dayMode, 'back'), league: leagueScreen, scorers: scorersScreen,
+      again: () => { newSeason(); S.scorers = {}; S.news = []; S.squad.forEach(p => { p.cond = 100; p.out = 0; p.ban = 0; p.yel = 0; p.tired = false; p.sApps = 0; p.sGoals = 0; p.sClean = 0; }); hubScreen('fwd'); },   // same club: a new season from the main screen
       faster: () => { S.fast = !S.fast; b.textContent = S.fast ? 'Normal Speed' : 'Faster'; },
       share: () => share(S.share, window.location.href, 'mobile_result_shared'),
       link: () => share('Championship Manager 26/27: play the full game in your browser', FULL_GAME, 'mobile_full_game_link'),
