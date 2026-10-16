@@ -108,8 +108,11 @@ Quick Season was designed as a lightweight, fast-playing tactical match and seas
 └── docs/                       # Web application root (GitHub Pages ready)
     ├── index.html              # Default entry point (Quick Season launcher)
     ├── quick-season.html       # Full Quick Season game page
+    ├── how-to-play.html        # Gameplay guide & FAQs
+    ├── see-the-game.html       # Game features & visual interface tour
     ├── database.html           # Database breakdown & statistics
     ├── changes.html            # Build updates changelog & known issues
+    ├── feedback.html           # Feedback, suggestions & bug tracker links
     ├── favicon.ico             # Site icon
     ├── bg.png                  # Fallback background
     └── assets/

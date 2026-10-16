@@ -1,12 +1,3 @@
-var _____WB$wombat$assign$function_____=function(name){return (globalThis._wb_wombat && globalThis._wb_wombat.local_init && globalThis._wb_wombat.local_init(name))||globalThis[name];};if(!globalThis.__WB_pmw){globalThis.__WB_pmw=function(obj){this.__WB_source=obj;return this;}}{
-let window = _____WB$wombat$assign$function_____("window");
-let self = _____WB$wombat$assign$function_____("self");
-let document = _____WB$wombat$assign$function_____("document");
-let location = _____WB$wombat$assign$function_____("location");
-let top = _____WB$wombat$assign$function_____("top");
-let parent = _____WB$wombat$assign$function_____("parent");
-let frames = _____WB$wombat$assign$function_____("frames");
-let opener = _____WB$wombat$assign$function_____("opener");
 // Quick Season page: pick a country, league and club from the 2026/27 database, pick your team the
 // CM 97/98 way (a squad screen and a tactics screen with real positions: LB, CB, RM, ST…), then each
 // matchday: the fixtures, the match as text commentary with a scorers log, the results, the league,
@@ -16,7 +7,7 @@ let opener = _____WB$wombat$assign$function_____("opener");
 // advantage, Poisson scorelines). Strength is Ability (shown as the rating, out of 200), adjusted for
 // position, side, fitness and form. Data from make_web.season_data: assets/season-data.json, then
 // assets/season/<league>.json.
-{
+(() => {
   const root = document.getElementById('season');
   const v = new URL(document.currentScript.src).searchParams.get('v') || '';
   const e = s => String(s).replace(/[&<>"']/g, c => `&#${c.charCodeAt(0)};`);
@@ -1144,28 +1135,4 @@ let opener = _____WB$wombat$assign$function_____("opener");
 
   fetch(`assets/season-data.json?v=${v}`).then(r => r.json()).then(d => { data = d; const sv = loadSave(); sv ? resumeScreen(sv) : countries(''); })
     .catch(() => { root.innerHTML = '<p class="qs-hint">Could not load the leagues. Refresh the page to try again.</p>'; });
-}
-
-}
-
-/*
-     FILE ARCHIVED ON 09:52:31 Oct 14, 2026 AND RETRIEVED FROM THE
-     INTERNET ARCHIVE ON 20:46:38 Oct 15, 2026.
-     JAVASCRIPT APPENDED BY WAYBACK MACHINE, COPYRIGHT INTERNET ARCHIVE.
-
-     ALL OTHER CONTENT MAY ALSO BE PROTECTED BY COPYRIGHT (17 U.S.C.
-     SECTION 108(a)(3)).
-*/
-/*
-playback timings (ms):
-  capture_cache.get: 0.41
-  captures_list: 0.633
-  exclusion.robots: 0.071
-  exclusion.robots.policy: 0.059
-  esindex: 0.012
-  cdx.remote: 7.563
-  LoadShardBlock: 79.577 (3)
-  PetaboxLoader3.datanode: 61.188 (4)
-  PetaboxLoader3.resolve: 68.828 (3)
-  load_resource: 94.99
-*/
+})();

@@ -748,20 +748,4 @@ table.fx.mine { font-size: 20px; }
 .cm640 .pl-note { left: 21px; top: 384px; width: 598px; text-align: center; font: 13px 'CM Sans 13', sans-serif; color: #a0a0a0; }
 .cmphone .c-rt { font: 13px 'CM Sans 13', sans-serif; color: #c8c8c8; } .cmphone .c-rt b { font-weight: 400; color: #10d0d0; margin: 0 8px 0 3px; }
 .cmphone .pl-ratings { display: flex; background: rgba(0, 0, 0, .45); padding: 6px 4px; } .cmphone .pl-ratings span { flex: 1; text-align: center; }
-.cmphone .pl-ratings b { font-weight: 400; color: #f8f838; margin-left: 4px; }
-
-/*
-     FILE ARCHIVED ON 09:51:48 Oct 14, 2026 AND RETRIEVED FROM THE
-     INTERNET ARCHIVE ON 20:46:33 Oct 15, 2026.
-     JAVASCRIPT APPENDED BY WAYBACK MACHINE, COPYRIGHT INTERNET ARCHIVE.
-
-     ALL OTHER CONTENT MAY ALSO BE PROTECTED BY COPYRIGHT (17 U.S.C.
-     SECTION 108(a)(3)).
-*/
-/*
-playback timings (ms):
-  capture_cache.get: 0.558
-  load_resource: 239.051
-  PetaboxLoader3.resolve: 33.33
-  PetaboxLoader3.datanode: 15.543
-*/
+.cmphone .pl-ratings b { font-weight: 400; color: #f8f838; margin-left: 4px; }
