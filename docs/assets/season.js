@@ -69,10 +69,14 @@
   };
   const FORMATIONS = Object.keys(FORMS);
   const slotsOf = f => FORMS[f].split(' ').map(k => ({ pos: P[k][0], line: P[k][1], side: P[k][2] }));
-  const TACTICS = {   // multiply [your xG, opponent's xG]: defending pays against stronger sides, attacking against weaker
-    defensive: { label: 'Defensive', xg: [0.85, 0.8] },
-    balanced: { label: 'Balanced', xg: [1, 1] },
-    attacking: { label: 'Attacking', xg: [1.2, 1.15] },
+  const TACTICS = {   // multiply [your xG, opponent's xG]: defending & counter pay against stronger sides, attacking against weaker
+    defensive: { label: 'Defensive', xg: [0.80, 0.75] },
+    counter: { label: 'Counter Attack', xg: [0.92, 0.82] },
+    balanced: { label: 'Balanced', xg: [1.00, 1.00] },
+    passing: { label: 'Passing', xg: [1.10, 0.95] },
+    direct: { label: 'Direct', xg: [1.14, 1.10] },
+    longball: { label: 'Long Ball', xg: [1.06, 0.96] },
+    attacking: { label: 'Attacking', xg: [1.25, 1.20] },
   };
   const STYLES = Object.keys(TACTICS);
   const TIRED = 75;          // condition below this: tired, and taken off around the hour if there's a sub
@@ -181,14 +185,25 @@
     const me = S.club.n, slots = slotsOf(S.formation), oppClub = h === me ? a : h;
     const spans = new Map(), line = new Map();   // who was on when (minutes), and in which line
     starters().forEach((pi, i) => { spans.set(pi, [0, 90]); line.set(pi, slots[i].line); });
-    const oppXI = lineup(oppClub).map(p => ({ name: p.name, line: p.fit.indexOf(Math.max(...p.fit)), agg: p.agg }));
+    const oppXI = lineup(oppClub).map(p => ({
+      name: p.name, line: p.fit ? p.fit.indexOf(Math.max(...p.fit)) : 2,
+      agg: p.agg, a: p.a, sho: p.sho, hea: p.hea, otb: p.otb
+    }));
     return { h, a, side: h === me ? 'h' : 'a', opp, forms: S.squad.map(p => 1 + gauss(S.rng) * (21 - (p.con || 10)) * 0.005),
       lineup: starters(), spans, line, oppXI, tactic: S.tactic, subsLeft: MAX_SUBS, score: [0, 0], events: [], injured: [], used: new Set(), halves: 0,
       booked: new Set(), sentOff: [], oppBooked: new Set(), oppOff: new Set() };
   }
   function expected(G) {   // both sides' xG for the rest of the match with both teams as they are now
-    const s = strength(G.lineup, G.forms), [tf, ta] = TACTICS[G.tactic].xg, home = G.side === 'h';
+    const s = strength(G.lineup, G.forms), home = G.side === 'h';
     const opp = G.opp * (1 - G.oppOff.size / 11);   // each opponent sent off takes his share of their strength with him
+    let [tf, ta] = (TACTICS[G.tactic] || TACTICS.balanced).xg;
+    if (G.tactic === 'counter' && opp > s.att) {
+      tf += Math.min(0.25, (opp - s.att) / 80);   // underdog counter bonus against attacking favorites
+    } else if (G.tactic === 'passing' && s.att > opp + 15) {
+      ta -= 0.10;   // superior passing starves weaker opponents of the ball
+    } else if (G.tactic === 'longball' && opp > s.att) {
+      ta -= 0.05;   // bypassing midfield reduces opponent counter danger
+    }
     return [(BASE_XG + (s.att - opp) / PER_GOAL + s.plus + (home ? HOME_ADV : 0)) * tf, (BASE_XG + (opp - s.def) / PER_GOAL + s.minus + (home ? 0 : HOME_ADV)) * ta];
   }
   function substitute(G, i, sub, m) {   // shirt place i: off goes the player there, on comes sub (or no one)
@@ -245,10 +260,19 @@
     spell(to);
     const minute = () => { let m; do m = from + 1 + Math.floor(rng() * 44); while (G.used.has(m)); G.used.add(m); return m; };
     const onPitch = (side, m) => side === mine
-      ? [...G.spans].filter(([pi, [on, off]]) => pi !== G.lineup[0] && on < m && m <= off).map(([pi]) => ({ name: S.squad[pi].name, line: G.line.get(pi) }))
+      ? [...G.spans].filter(([pi, [on, off]]) => pi !== G.lineup[0] && on < m && m <= off).map(([pi]) => {
+          const p = S.squad[pi];
+          return { name: p.name, line: G.line.get(pi), a: p.a, sho: p.attrs?.[14] || 10, hea: p.attrs?.[6] || 10, otb: p.attrs?.[9] || 10 };
+        })
       : G.oppXI.slice(1).filter(p => !G.oppOff.has(p.name));   // (roughly: one sent off this half scores in none of it)
-    const weight = p => [0.05, 0.6, 2.5, 6][p.line];
-    const pick = (side, m) => { const ps = onPitch(side, m), tot = ps.reduce((s, p) => s + weight(p), 0); let x = rng() * tot; return ps.find(p => (x -= weight(p)) < 0) || ps[0] || { name: 'Unknown' }; };
+    const scorerWeight = p => {
+      const line = p.line ?? (p.fit ? p.fit.indexOf(Math.max(...p.fit)) : 2);
+      const baseLine = [0.001, 0.4, 2.0, 5.5][line] || 1;
+      const abilFactor = Math.pow(Math.max(40, p.a || 100) / 100, 1.3);
+      const skillFactor = line === 1 ? (0.5 + (p.hea || 10) * 0.05) : (0.4 + (p.sho || 10) * 0.04 + (p.otb || 10) * 0.02);
+      return baseLine * abilFactor * skillFactor;
+    };
+    const pick = (side, m) => { const ps = onPitch(side, m), tot = ps.reduce((s, p) => s + scorerWeight(p), 0); let x = rng() * tot; return ps.find(p => (x -= scorerWeight(p)) < 0) || ps[0] || { name: 'Unknown' }; };
     for (const [side, x] of [[mine, clamp(xg[0], 0.05, MAX_XG / 2)], [theirs, clamp(xg[1], 0.05, MAX_XG / 2)]]) {
       for (let g = poisson(x, rng); g > 0; g--) { const m = minute(); events.push({ m, side, kind: 'goal', p: pick(side, m) }); }
       for (let c = poisson(0.6 + x * 1.4, rng); c > 0; c--) { const m = minute(); events.push({ m, side, kind: rng() < 0.45 ? 'save' : 'miss', p: pick(side, m) }); }
@@ -266,8 +290,11 @@
     const outfield = xi.slice(1);
     if (!outfield.length) return xi[0];
     const weight = p => {
-      const line = p.fit ? p.fit.indexOf(Math.max(...p.fit)) : 2;
-      return ([0.01, 0.6, 2.5, 6.0][line] || 1) * Math.max(0.2, (p.a || 100) / 100);
+      const line = p.line ?? (p.fit ? p.fit.indexOf(Math.max(...p.fit)) : 2);
+      const baseLine = [0.001, 0.4, 2.0, 5.5][line] || 1;
+      const abilFactor = Math.pow(Math.max(40, p.a || 100) / 100, 1.3);
+      const skillFactor = line === 1 ? (0.5 + (p.hea || 10) * 0.05) : (0.4 + (p.sho || 10) * 0.04 + (p.otb || 10) * 0.02);
+      return baseLine * abilFactor * skillFactor;
     };
     const tot = outfield.reduce((sum, p) => sum + weight(p), 0);
     let x = S.rng() * tot;
@@ -940,7 +967,9 @@
 
   // ---------- the match: CM 97/98 style text commentary ----------
   function lineup(club) {   // an opponent's XI for the commentary: best keeper plus the ten best outfield players
-    const sq = (squads[S.league.code][club] || []).map(([name, , a, fit, , , , , , attrs]) => ({ name, a, fit, agg: attrs?.[1] }));
+    const sq = (squads[S.league.code]?.[club] || []).map(([name, , a, fit, , , , , , attrs]) => ({
+      name, a, fit, agg: attrs?.[1], sho: attrs?.[14], hea: attrs?.[6], otb: attrs?.[9]
+    }));
     const keeper = sq.filter(p => p.fit[0] === 100).sort((x, y) => y.a - x.a)[0];
     return [keeper, ...sq.filter(p => p !== keeper).sort((x, y) => y.a - x.a).slice(0, 10)].filter(Boolean);
   }
