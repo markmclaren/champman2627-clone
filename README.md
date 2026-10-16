@@ -2,7 +2,7 @@
 
 An unofficial, fully reconstructed 2026/27 edition of Championship Manager running **100% in pure JavaScript** in your web browser.
 
-Originally hosted at `champman2627.co.uk`, this standalone package recreates the **Quick Season** engine and the entire 2026/27 modern database with zero external dependencies, no DOS emulators, and no remote server requirements. 
+Originally hosted at `champman2627.co.uk`, the site went offline and portions of the client-side engine and web assets were recovered from the [Internet Archive's Wayback Machine](https://web.archive.org/web/*/https://www.champman2627.co.uk/*). This standalone package recreates the **Quick Season** engine and the entire 2026/27 modern database with zero external dependencies, no DOS emulators, and no tracking.
 
 The underlying 2026/27 player, club, and league data is sourced from **[Championship Manager 26/27 Edition Dicaprio ProductionZ](https://swos21z.itch.io/championship-manager-2627)**.
 
@@ -190,8 +190,8 @@ Each league file is a JSON object keyed by club name:
 
 ---
 
-## Data Source & Legal Attribution
+## Provenance & Attribution
 
-* **Data Source**: The player, squad, and club data is derived and adapted from the 2026/27 database by Dicaprio ProductionZ, available at **[https://swos21z.itch.io/championship-manager-2627](https://swos21z.itch.io/championship-manager-2627)**.
-* **Game Engine & Presentation**: Reconstructed from the web application assets originally deployed at `champman2627.co.uk`.
+* **Web Game Code & Assets**: Recovered and reconstructed from snapshots preserved in the [Internet Archive / Wayback Machine](https://web.archive.org/web/*/https://www.champman2627.co.uk/*) (original domain: `champman2627.co.uk`).
+* **Player & Squad Database**: Sourced and adapted from the 2026/27 database by Dicaprio ProductionZ, available at **[https://swos21z.itch.io/championship-manager-2627](https://swos21z.itch.io/championship-manager-2627)**.
 * **Legal Disclaimer**: This is an unofficial, not-for-profit fan preservation project. Not affiliated with or endorsed by Sports Interactive, Square Enix, or Eidos. Championship Manager is a trademark of Square Enix.
