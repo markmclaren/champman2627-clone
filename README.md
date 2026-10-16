@@ -52,6 +52,7 @@ In your repository settings on GitHub:
   * **22 Playable Leagues** across 9 European nations (England, Scotland, Italy, Spain, Germany, France, Netherlands, Portugal, Belgium).
   * **394 Clubs** with authentic modern kit colors, stadiums, capacities, and club ratings.
   * **7,890 Players** with authentic 2026/27 abilities, positions, valuations, birth dates, international stats, and all 19 Championship Manager playing skills.
+  * **Authentic Attribute Profiles & Sentinels Resolved**: Procedurally balances all CM 97/98 unset attribute sentinels across all 7,890 players based on ability, role (GK, CB, FB, DM, CM, Winger, AM, Striker), and age, while preserving 100% of genuinely scouted attributes and eliminating the all-1s bug.
   * Modern top stars calibrated to £100m–£150m valuations (Haaland, Mbappé, Bellingham, Yamal, Kane, Vinícius, etc.).
   * Data extracted and adapted from [Championship Manager 26/27 Edition Dicaprio ProductionZ](https://swos21z.itch.io/championship-manager-2627).
 
